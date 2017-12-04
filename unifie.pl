@@ -1,6 +1,23 @@
 :- style_check(-singleton).
+:- dynamic echo_on/0.
+
 % Opération ?=
 :- op(20,xfy,?=).
+
+%Prédicats d'affichage fournis
+
+% set_echo: ce prédicat active l'affichage par le prédicat echo
+set_echo :- assert(echo_on).
+
+%clr_echo: ce prédicat inhibe l'affichage par le prédicat echo
+clr_echo :- retractall(echo_on).
+
+% echo(T): si le flag echo_on est positionné, echo(T) affiche le terme T
+%          sinon, echo(T) réussit simplement en ne faisant rien.
+echo(T) :- set_prolog_flag(double_quotes, string), echo_on, !, write(T).
+echo(_).
+echoln(T) :- echo_on, echo(T), nl.
+echoln(_).
 
 % Occur check
 
@@ -22,23 +39,32 @@ regle(X ?= Y, simplify) :- var(X), atomic(Y), !.
 regle(X ?= Y, expand) :- compound(Y), var(X), occur_check(X,Y), !.
 regle(X ?= Y, orient) :- not(var(X)), var(Y), !.
 regle(X ?= Y, decompose) :- compound(X), compound(Y), functor(X,N,A), functor(Y,M,B), (M == N), (A == B), !.
-regle(X ?= Y, clash) :- compound(X), compound(Y), functor(X,A,_), functor(Y,B,_), A \= B, write("clash : "), print(X ?= Y), nl, !.
-regle(X ?= Y, clash) :- compound(X), compound(Y), functor(X,_,N), functor(Y,_,M), N \= M, write("clash : "), print(X ?= Y), nl, !.
-regle(X ?= Y, occur_check) :- var(X), write("occur check : "), print(X ?= Y), nl, not(occur_check(X, Y)), fail.
+regle(X ?= Y, clash) :- compound(X), compound(Y), functor(X,A,_), functor(Y,B,_), A \= B, echo("clash : "), echo(X ?= Y), !.
+regle(X ?= Y, clash) :- compound(X), compound(Y), functor(X,_,N), functor(Y,_,M), N \= M, echo("clash : "), echo(X ?= Y), !.
+regle(X ?= Y, occur_check) :- var(X), echo("occur check : "), echo(X ?= Y), not(occur_check(X, Y)), fail.
 regle(X ?= Y, clean) :- atomic(X), atomic(Y), X == Y, !.
 
 % Réduction
-reduit(rename, X ?= Y, P, Q) :- write("rename : "), print(X ?= Y), nl, Q = P, X = Y, !.
-reduit(simplify, X ?= Y, P, Q) :- write("simplify : "), print(X ?= Y), nl, Q = P, X = Y, !.
-reduit(expand, X ?= Y, P, Q) :- write("expand : "), print(X ?= Y), nl, Q = P, X = Y, !.
-reduit(orient, X ?= Y, P, Q) :- write("orient : "), print(X ?= Y), nl, append(P, [Y ?=X], Q), !.
-reduit(decompose, X ?= Y, P, Q) :- write("decompose : "), print(X ?= Y), nl, functor(X,_,A), decomposition(X,Y,A,R), append(R,P,Q), !.
-reduit(clean, X ?= Y, P, Q) :- write("clean : "), print(X ?= Y), nl, Q = P, !.
+reduit(rename, X ?= Y, P, Q) :- echo("rename : "), echoln(X ?= Y), Q = P, X = Y, !.
+reduit(simplify, X ?= Y, P, Q) :- echo("simplify : "), echoln(X ?= Y), Q = P, X = Y, !.
+reduit(expand, X ?= Y, P, Q) :- echo("expand : "), echoln(X ?= Y), Q = P, X = Y, !.
+reduit(orient, X ?= Y, P, Q) :- echo("orient : "), echoln(X ?= Y), append(P, [Y ?=X], Q), !.
+reduit(decompose, X ?= Y, P, Q) :- echo("decompose : "), echoln(X ?= Y), functor(X,_,A), decomposition(X,Y,A,R), append(R,P,Q), !.
+reduit(clean, X ?= Y, P, Q) :- echo("clean : "), echoln(X ?= Y), Q = P, !.
 
 % Décomposition des arguments d'une fonction en une liste d'équations
 decomposition(X, Y, N, Q) :- N \= 1, plus(N, -1, M), decomposition(X, Y, M, P), arg(N, X, A), arg(N, Y, B), append([A ?= B], P, Q).
 decomposition(X, Y, N, Q) :- N == 1, arg(N, X, A), arg(N, Y, B), Q = [A ?= B].
 
+% Stratégies de choix
+% Choix de la première équation
+choix_premier([X|T], Q, E, R) :- Q = T, E = X, regle(E, R). 
+
 % Unification
 unifie([]).
-unifie([X|T]) :- write("system : "), print([X|T]), nl, regle(X, R), reduit(R, X, T, Q), unifie(Q).
+unifie([X|T]) :- echo("system : "), echoln([X|T]), regle(X, R), reduit(R, X, T, Q), unifie(Q).
+unifie(P,S) :- echo("system : "), echoln(P), call(S, P, Q, X, R), reduit(R, X, Q, F), unifie(F).
+
+% Unification avec niveau de details
+unif(P,S) :- clr_echo, unifie(P,S).
+trace_unif(P,S) :- set_echo, unifie(P,S).
