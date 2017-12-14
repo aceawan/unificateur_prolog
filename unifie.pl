@@ -1,5 +1,6 @@
 :- style_check(-singleton).
 :- dynamic echo_on/0.
+:- use_module(library(lists)).
 
 % Opération ?=
 :- op(20,xfy,?=).
@@ -39,9 +40,9 @@ regle(X ?= Y, simplify) :- var(X), atomic(Y), !.
 regle(X ?= Y, expand) :- compound(Y), var(X), occur_check(X,Y), !.
 regle(X ?= Y, orient) :- not(var(X)), var(Y), !.
 regle(X ?= Y, decompose) :- compound(X), compound(Y), functor(X,N,A), functor(Y,M,B), (M == N), (A == B), !.
-regle(X ?= Y, clash) :- compound(X), compound(Y), functor(X,A,_), functor(Y,B,_), A \= B, echo("clash : "), echo(X ?= Y), !.
-regle(X ?= Y, clash) :- compound(X), compound(Y), functor(X,_,N), functor(Y,_,M), N \= M, echo("clash : "), echo(X ?= Y), !.
-regle(X ?= Y, occur_check) :- var(X), echo("occur check : "), echo(X ?= Y), not(occur_check(X, Y)), fail.
+regle(X ?= Y, clash) :- compound(X), compound(Y), functor(X,A,_), functor(Y,B,_), A \= B, !.
+regle(X ?= Y, clash) :- compound(X), compound(Y), functor(X,_,N), functor(Y,_,M), N \= M, !.
+regle(X ?= Y, occur_check) :- X \== Y, var(X), not(occur_check(X, Y)), !.
 regle(X ?= Y, clean) :- atomic(X), atomic(Y), X == Y, !.
 
 % Réduction
@@ -58,12 +59,30 @@ decomposition(X, Y, N, Q) :- N == 1, arg(N, X, A), arg(N, Y, B), Q = [A ?= B].
 
 % Stratégies de choix
 % Choix de la première équation
-choix_premier([X|T], Q, E, R) :- Q = T, E = X, regle(E, R). 
+choix_premier([X|T], Q, E, R) :- Q = T, E = X, regle(E, R), !.
+
+% Choix en fonction des règles, fournies dans l'ordre suivant
+% clash, check > rename, simplify > orient > decompose > expand
+choix_pondere(P, Q, E, R) :- cherche_regle(P, [clash, occur_check, rename, simplify, orient, decompose, expand, clean], R, E), delete(P, E, Q), !.
+
+% Cherche la règle R qu'on peut appliquer à E dans une liste de règles D qu'on peut appliquer à une liste d'équations d'unification L
+cherche_regle(L, [X|D], R, E) :- cherche_elem(L, X, E), R = X, !.
+cherche_regle(L, [X|D], R, E) :- cherche_regle(L, D, R, E), !.
+
+% Cherche l'élément E sur lequel on peut appliquer une règle R dans une liste d'équations d'unification L.
+cherche_elem([X|L], R, E) :- regle(X, R), E = X, !.
+cherche_elem([X|L], R, E) :- cherche_elem(L,R,E), !.
 
 % Unification
 unifie([]).
-unifie([X|T]) :- echo("system : "), echoln([X|T]), regle(X, R), reduit(R, X, T, Q), unifie(Q).
-unifie(P,S) :- echo("system : "), echoln(P), call(S, P, Q, X, R), reduit(R, X, Q, F), unifie(F).
+unifie([X|T]) :- regle(X, clash), echo("clash : "), echoln([X|T]), !, fail.
+unifie([X|T]) :- regle(X, occur_check), echo("occur_check : "), echoln([X|T]), !, fail.
+unifie([X|T]) :- echo("system : "), echoln([X|T]), !, regle(X, R), reduit(R, X, T, Q), unifie(Q), !.
+
+unifie([],S).
+unifie(P,S) :- call(S, P, Q, X, R), X == clash, echo("clash : "), echoln(P), !, fail.
+unifie(P,S) :- call(S, P, Q, X, R), X == occur_check, echo("occur_check : "), echoln(P), !, fail.
+unifie(P,S) :- echo("system : "), echoln(P), !, call(S, P, Q, X, R), reduit(R, X, Q, F), unifie(F,S), !.
 
 % Unification avec niveau de details
 unif(P,S) :- clr_echo, unifie(P,S).
