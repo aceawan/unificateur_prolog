@@ -40,8 +40,8 @@ regle(X ?= Y, simplify) :- var(X), atomic(Y), !.
 regle(X ?= Y, expand) :- compound(Y), var(X), occur_check(X,Y), !.
 regle(X ?= Y, orient) :- not(var(X)), var(Y), !.
 regle(X ?= Y, decompose) :- compound(X), compound(Y), functor(X,N,A), functor(Y,M,B), (M == N), (A == B), !.
-regle(X ?= Y, clash) :- compound(X), compound(Y), functor(X,A,_), functor(Y,B,_), A \= B, !.
-regle(X ?= Y, clash) :- compound(X), compound(Y), functor(X,_,N), functor(Y,_,M), N \= M, !.
+regle(X ?= Y, clash) :- compound(X), compound(Y), functor(X,A,_), functor(Y,B,_), A \== B, !.
+regle(X ?= Y, clash) :- compound(X), compound(Y), functor(X,_,N), functor(Y,_,M), N \== M, !.
 regle(X ?= Y, occur_check) :- X \== Y, var(X), not(occur_check(X, Y)), !.
 regle(X ?= Y, clean) :- atomic(X), atomic(Y), X == Y, !.
 
@@ -75,14 +75,14 @@ cherche_elem([X|L], R, E) :- cherche_elem(L,R,E), !.
 
 % Unification
 unifie([]).
-unifie([X|T]) :- regle(X, clash), echo("clash : "), echoln([X|T]), !, fail.
-unifie([X|T]) :- regle(X, occur_check), echo("occur_check : "), echoln([X|T]), !, fail.
+unifie([X|T]) :- regle(X, clash), echo("clash : "), echoln(X), !, fail.
+unifie([X|T]) :- regle(X, occur_check), echo("occur_check : "), echoln(X), !, fail.
 unifie([X|T]) :- echo("system : "), echoln([X|T]), !, regle(X, R), reduit(R, X, T, Q), unifie(Q), !.
 
 unifie([],S).
-unifie(P,S) :- call(S, P, Q, X, R), X == clash, echo("clash : "), echoln(P), !, fail.
-unifie(P,S) :- call(S, P, Q, X, R), X == occur_check, echo("occur_check : "), echoln(P), !, fail.
-unifie(P,S) :- echo("system : "), echoln(P), !, call(S, P, Q, X, R), reduit(R, X, Q, F), unifie(F,S), !.
+unifie(P,S) :- call(S, P, Q, X, R), R == clash, echo("clash : "), echoln(X), !, fail.
+unifie(P,S) :- call(S, P, Q, X, R), R == occur_check, echo("occur_check : "), echoln(X), !, fail.
+unifie(P,S) :- echo("system: "), echoln(P), !, call(S, P, Q, X, R), reduit(R, X, Q, F), unifie(F,S), !.
 
 % Unification avec niveau de details
 unif(P,S) :- clr_echo, unifie(P,S).
