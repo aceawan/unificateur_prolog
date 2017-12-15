@@ -1,6 +1,7 @@
 :- style_check(-singleton).
 :- dynamic echo_on/0.
 :- use_module(library(lists)).
+:- set_prolog_flag(double_quotes, string).
 
 % Opération ?=
 :- op(20,xfy,?=).
@@ -15,7 +16,7 @@ clr_echo :- retractall(echo_on).
 
 % echo(T): si le flag echo_on est positionné, echo(T) affiche le terme T
 %          sinon, echo(T) réussit simplement en ne faisant rien.
-echo(T) :- set_prolog_flag(double_quotes, string), echo_on, !, write(T).
+echo(T) :- echo_on, !, write(T).
 echo(_).
 echoln(T) :- echo_on, echo(T), nl.
 echoln(_).
