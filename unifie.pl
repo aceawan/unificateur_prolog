@@ -65,7 +65,14 @@ choix_premier([X|T], Q, E, R) :- Q = T, E = X, regle(E, R), !.
 
 % Choix en fonction des règles, fournies dans l'ordre suivant
 % clash, check > rename, simplify > orient > decompose > expand
-choix_pondere(P, Q, E, R) :- cherche_regle(P, [clash, occur_check, rename, simplify, orient, decompose, expand, clean], R, E), delete(P, E, Q), !.
+choix_pondere(P, Q, E, R) :- cherche_regle(P, [clash, occur_check, rename, simplify, orient, decompose, expand, clean], R, E), delete_elem(E, P, [], Q), !.
+
+% X ?= Y, équation à supprimer
+% [W ?= Z|L] liste des équations restantes
+% Q liste déjà vérifié
+% R résultat
+delete_elem(X ?= Y, [(W ?= Z)|L], Q, R) :- (X == W), (Y == Z), append(Q, L, R), !.
+delete_elem(X ?= Y, [W|L], Q, R) :- append(Q, [W], I), delete_elem(X ?= Y, L, I, R), !.
 
 % Cherche la règle R qu'on peut appliquer à E dans une liste de règles D qu'on peut appliquer à une liste d'équations d'unification L
 cherche_regle(L, [X|D], R, E) :- cherche_elem(L, X, E), R = X, !.
@@ -81,7 +88,7 @@ unifie([X|T]) :- regle(X, clash), echo("clash : "), echoln(X), !, fail.
 unifie([X|T]) :- regle(X, occur_check), echo("occur_check : "), echoln(X), !, fail.
 unifie([X|T]) :- echo("system : "), echoln([X|T]), !, regle(X, R), reduit(R, X, T, Q), unifie(Q), !.
 
-unifie([],S).
+unifie([],S) :- echoln("Il n'y a plus d'équation à unifier").
 unifie(P,S) :- call(S, P, Q, X, R), R == clash, echo("clash : "), echoln(X), !, fail.
 unifie(P,S) :- call(S, P, Q, X, R), R == occur_check, echo("occur_check : "), echoln(X), !, fail.
 unifie(P,S) :- echo("system: "), echoln(P), !, call(S, P, Q, X, R), reduit(R, X, Q, F), unifie(F,S), !.
