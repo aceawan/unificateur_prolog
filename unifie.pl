@@ -43,14 +43,14 @@ regle(X ?= Y, orient) :- not(var(X)), var(Y), !.
 regle(X ?= Y, decompose) :- compound(X), compound(Y), functor(X,N,A), functor(Y,M,B), (M == N), (A == B), !.
 regle(X ?= Y, clash) :- compound(X), compound(Y), functor(X,A,_), functor(Y,B,_), A \== B, !.
 regle(X ?= Y, clash) :- compound(X), compound(Y), functor(X,_,N), functor(Y,_,M), N \== M, !.
-regle(X ?= Y, occur_check) :- X \== Y, var(X), not(occur_check(X, Y)), !.
+regle(X ?= Y, occur_check) :- X \== Y, var(X), compound(Y), not(occur_check(X, Y)), !.
 regle(X ?= Y, clean) :- atomic(X), atomic(Y), X == Y, !.
 
 % Réduction
 reduit(rename, X ?= Y, P, Q) :- echo("rename : "), echoln(X ?= Y), Q = P, X = Y, !.
 reduit(simplify, X ?= Y, P, Q) :- echo("simplify : "), echoln(X ?= Y), Q = P, X = Y, !.
 reduit(expand, X ?= Y, P, Q) :- echo("expand : "), echoln(X ?= Y), Q = P, X = Y, !.
-reduit(orient, X ?= Y, P, Q) :- echo("orient : "), echoln(X ?= Y), append(P, [Y ?=X], Q), !.
+reduit(orient, X ?= Y, P, Q) :- echo("orient : "), echoln(X ?= Y), append(P, [Y ?= X], Q), !.
 reduit(decompose, X ?= Y, P, Q) :- echo("decompose : "), echoln(X ?= Y), functor(X,_,A), decomposition(X,Y,A,R), append(R,P,Q), !.
 reduit(clean, X ?= Y, P, Q) :- echo("clean : "), echoln(X ?= Y), Q = P, !.
 
@@ -59,6 +59,7 @@ decomposition(X, Y, N, Q) :- N \= 1, plus(N, -1, M), decomposition(X, Y, M, P), 
 decomposition(X, Y, N, Q) :- N == 1, arg(N, X, A), arg(N, Y, B), Q = [A ?= B].
 
 % Stratégies de choix
+
 % Choix de la première équation
 choix_premier([X|T], Q, E, R) :- Q = T, E = X, regle(E, R), !.
 
